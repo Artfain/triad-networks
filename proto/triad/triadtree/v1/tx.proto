@@ -1,0 +1,70 @@
+syntax = "proto3";
+package triad.triadtree.v1;
+
+import "cosmos/base/v1beta1/coin.proto";
+import "google/api/annotations.proto";
+option go_package = "github.com/Artfain/triad-networks/x/triadtree/types";
+
+// Msg defines the Msg service.
+service Msg {
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse) {
+    option (google.api.http) = {
+      post: "/triad/triadtree/update_params"
+      body: "*"
+    };
+  }
+  rpc AddDevice(MsgAddDevice) returns (MsgAddDeviceResponse) {
+    option (google.api.http) = {
+      post: "/triad/triadtree/add_device"
+      body: "*"
+    };
+  }
+}
+
+message DeviceNode {
+    string device_hash = 1;
+    repeated string children = 2;
+    repeated TransactionLeaf transactions = 3;
+    bool consented = 4;
+    uint64 power_usage = 5;
+    uint64 power_limit = 6;
+}
+
+message DeviceData {
+    string device_id = 1;
+    string owner = 2;
+    string device_type = 3;
+}
+
+message TransactionLeaf {
+    string tx_id = 1;
+    cosmos.base.v1beta1.Coin amount = 2;
+    string to = 3;
+    int64 timestamp = 4;
+    string tx_proof = 5;
+}
+
+message UserTree {
+    string tree_id = 1;
+    DeviceNode root = 2;
+    uint64 depth = 3;
+    int64 last_active = 4;
+}
+
+message MsgAddDevice {
+    string creator = 1;
+    string tree_id = 2;
+    string device_id = 3;
+    string device_type = 4;
+    string parent_device_id = 5;
+    string tx_proof = 6;
+}
+
+message MsgAddDeviceResponse {}
+
+message MsgUpdateParams {
+  string authority = 1;
+  string params = 2;
+}
+
+message MsgUpdateParamsResponse {}

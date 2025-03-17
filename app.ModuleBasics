@@ -1,0 +1,9 @@
+app.ModuleBasics = module.ModuleBasics{
+    genutil.AppModuleBasic{},
+    auth.AppModuleBasic{},
+    bank.AppModuleBasic{},
+    // ... другие модули ...
+    triad.AppModuleBasic{},
+    triadtree.AppModuleBasic{}, // Добавь эту строку
+    triadcoin.AppModuleBasic{},
+}

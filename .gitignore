@@ -1,0 +1,50 @@
+# Бинарные файлы и скомпилированные исполняемые файлы
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+triadd
+
+# Временные файлы
+*.tmp
+*.swp
+*~
+
+# Локальные данные и конфигурация
+*.local
+*.log
+/config
+
+# Сгенерированные файлы (например, из proto)
+*.pb.go
+*.pb.gw.go
+*.pb.validate.go
+*.swagger.json
+
+# Папка tools (она не должна компилироваться как часть приложения)
+tools/
+
+# Локальные данные Cosmos SDK и Ignite
+/data
+/config
+/.triad
+
+# Go build и зависимости
+vendor/
+bin/
+pkg/
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.iml
+
+# Тестовые файлы и кэш
+*.test
+_testmain.go
+coverage.txt
+profile.out
+
+# Локальные зависимости
+go.sum
