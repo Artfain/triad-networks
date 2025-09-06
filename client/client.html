@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triad Networks</title>
+    <style>
+        :root {
+            --ruler: 16px;
+            --color-red: #AE1100;
+            --color-bg: #EBECF0;
+            --color-shadow: #BABECC;
+            --color-white: #FFF;
+            --color-green: #28A745;
+            --color-blue: #007BFF;
+        }
+
+        body, html {
+            background-color: var(--color-bg);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Montserrat', sans-serif;
+            letter-spacing: -0.2px;
+            font-size: var(--ruler);
+        }
+
+        div, p {
+            color: var(--color-shadow);
+            text-shadow: 1px 1px 1px var(--color-white);
+        }
+
+        form {
+            padding: var(--ruler);
+            width: calc(var(--ruler) * 30);
+            margin: 0 auto;
+        }
+
+        .segment {
+            padding: calc(var(--ruler) * 2) 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: calc(var(--ruler) / 2);
+        }
+
+        button, input {
+            border: 0;
+            outline: 0;
+            font-size: var(--ruler);
+            border-radius: calc(var(--ruler) * 20);
+            background-color: var(--color-bg);
+            text-shadow: 1px 1px 0 var(--color-white);
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        label {
+            display: block;
+            margin-bottom: calc(var(--ruler) * 1.5);
+            width: 100%;
+        }
+
+        input {
+            margin-right: calc(var(--ruler) / 2);
+            box-shadow: inset 2px 2px 5px var(--color-shadow), inset -5px -5px 10px var(--color-white);
+            width: 100%;
+            padding: var(--ruler);
+            box-sizing: border-box;
+            transition: all 0.2s ease-in-out;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        input:focus {
+            box-shadow: inset 1px 1px 2px var(--color-shadow), inset -1px -1px 2px var(--color-white);
+        }
+
+        button {
+            color: #61677C;
+            font-weight: bold;
+            box-shadow: -5px -5px 20px var(--color-white), 5px 5px 20px var(--color-shadow);
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            box-shadow: -2px -2px 5px var(--color-white), 2px 2px 5px var(--color-shadow);
+        }
+
+        button:active {
+            box-shadow: inset 1px 1px 2px var(--color-shadow), inset -1px -1px 2px var(--color-white);
+        }
+
+        button.red {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--color-red);
+            width: calc(var(--ruler) * 10);
+            padding: calc(var(--ruler) * 0.5);
+            line-height: calc(var(--ruler) * 2);
+            margin: 0 auto;
+            box-shadow: -5px -5px 20px var(--color-white), 5px 5px 20px var(--color-shadow);
+            box-sizing: border-box;
+            transition: all 0.2s ease-in-out;
+        }
+
+        button.red:hover {
+            box-shadow: -2px -2px 5px var(--color-white), 2px 2px 5px var(--color-shadow);
+        }
+
+        button.red:active {
+            box-shadow: inset 1px 1px 2px var(--color-shadow), inset -1px -1px 2px var(--color-white);
+        }
+
+        button.red svg {
+            margin-right: calc(var(--ruler) / 2);
+        }
+
+        button.green {
+            color: var(--color-green);
+            width: calc(var(--ruler) * 12);
+            padding: calc(var(--ruler) * 0.5);
+            line-height: calc(var(--ruler) * 2);
+            margin: 0 auto;
+        }
+
+        button.blue {
+            color: var(--color-blue);
+            width: calc(var(--ruler) * 12);
+            padding: calc(var(--ruler) * 0.5);
+            line-height: calc(var(--ruler) * 2);
+            margin: 0 auto;
+        }
+
+        button.unit {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: calc(var(--ruler) * 3);
+            height: calc(var(--ruler) * 3);
+            margin: 0;
+            border-radius: 50%;
+        }
+
+        button.unit img {
+            width: 20px;
+            height: 20px;
+        }
+
+        .error {
+            color: var(--color-red);
+            text-shadow: none;
+        }
+
+        .success {
+            color: #61677C;
+            text-shadow: 1px 1px 0 var(--color-white);
+        }
+
+        .text-sm {
+            font-size: calc(var(--ruler) * 0.75);
+        }
+
+        .mt-1 {
+            margin-top: calc(var(--ruler) / 4);
+        }
+
+        .mt-4 {
+            margin-top: var(--ruler);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .social-login-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--color-bg);
+            border-radius: 15px;
+            padding: calc(var(--ruler) * 2);
+            box-shadow: -5px -5px 20px var(--color-white), 5px 5px 20px var(--color-shadow);
+            z-index: 1000;
+            display: none;
+        }
+
+        .social-login-modal.active {
+            display: block;
+        }
+
+        .social-button {
+            background: var(--color-bg);
+            border: none;
+            padding: var(--ruler);
+            color: #61677C;
+            font-weight: bold;
+            border-radius: calc(var(--ruler) * 20);
+            transition: all 0.2s ease-in-out;
+            box-shadow: -5px -5px 20px var(--color-white), 5px 5px 20px var(--color-shadow);
+            width: 100%;
+            margin-bottom: var(--ruler);
+            cursor: pointer;
+        }
+
+        .social-button:hover {
+            box-shadow: -2px -2px 5px var(--color-white), 2px 2px 5px var(--color-shadow);
+        }
+
+        .social-button:active {
+            box-shadow: inset 1px 1px 2px var(--color-shadow), inset -1px -1px 2px var(--color-white);
+        }
+
+        svg.icon {
+            width: 1em;
+            height: 1em;
+            display: inline-block;
+        }
+
+        .dashboard {
+            display: none;
+            width: 100%;
+        }
+
+        .dashboard.active {
+            display: block;
+        }
+
+        .banner {
+            background: linear-gradient(135deg, var(--color-green), var(--color-blue));
+            color: var(--color-white);
+            text-shadow: none;
+            padding: calc(var(--ruler) * 2);
+            border-radius: calc(var(--ruler) * 1);
+            margin-bottom: calc(var(--ruler) * 2);
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: calc(var(--ruler) / 2);
+            margin-bottom: calc(var(--ruler) * 2);
+        }
+
+        .stat-card {
+            background: var(--color-bg);
+            box-shadow: -5px -5px 20px var(--color-white), 5px 5px 20px var(--color-shadow);
+            padding: var(--ruler);
+            border-radius: calc(var(--ruler) * 1);
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: calc(var(--ruler) / 2);
+        }
+
+        .progress-bar {
+            width: 100%;
+            background: var(--color-shadow);
+            border-radius: calc(var(--ruler) * 1);
+            height: calc(var(--ruler) * 1.5);
+            margin-top: calc(var(--ruler) / 2);
+        }
+
+        .progress {
+            height: 100%;
+            background: var(--color-green);
+            border-radius: calc(var(--ruler) * 1);
+            transition: width 0.3s ease-in-out;
+        }
+
+        .console {
+            background: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            padding: var(--ruler);
+            border-radius: calc(var(--ruler) * 1);
+            margin-top: calc(var(--ruler) * 2);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .console-log {
+            margin: 0;
+            padding: 2px 0;
+        }
+
+        .console-input {
+            background: #333;
+            color: #ffffff;
+            border: none;
+            padding: calc(var(--ruler) / 2);
+            width: 100%;
+            font-family: 'Courier New', Courier, monospace;
+            border-radius: calc(var(--ruler) * 0.5);
+            margin-top: calc(var(--ruler) / 2);
+        }
+
+        .console-input:focus {
+            outline: none;
+            background: #444;
+        }
+    </style>
+</head>
+<body>
+    <!-- Форма логина -->
+    <form id="loginForm" class="active">
+        <div class="segment">
+            <h1>Triad Networks</h1>
+        </div>
+
+        <label>
+            <input type="email" id="email" placeholder="Email (e.g., user@example.com)"/>
+            <p id="emailError" class="text-sm mt-1 error"></p>
+        </label>
+        <label>
+            <input type="password" id="password" placeholder="Password"/>
+            <p id="passwordError" class="text-sm mt-1 error"></p>
+        </label>
+        <label>
+            <button class="red" type="button" onclick="register()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#AE1100">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm4-9h-3V8c0-.55-.45-1-1-1s-1 .45-1 1v3H8c-.55 0-1 .45-1 1s.45 1 1 1h3v3c0 .55.45 1 1 1s1-.45 1-1v3h3c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+                </svg>
+                Sign in
+            </button>
+        </label>
+        <label>
+            <button class="red" type="button" onclick="login()">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#AE1100">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm0-9c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/>
+                </svg>
+                Log in
+            </button>
+        </label>
+
+        <div class="segment">
+            <button class="unit" type="button" onclick="triggerSocialSignIn('Google')">
+                <img src="assets/google.png" alt="Google">
+            </button>
+            <button class="unit" type="button" onclick="triggerSocialSignIn('Apple')">
+                <img src="assets/apple.png" alt="Apple">
+            </button>
+            <button class="unit" type="button" onclick="triggerSocialSignIn('Twitter')">
+                <img src="assets/x.png" alt="X">
+            </button>
+            <button class="unit" type="button" onclick="triggerSocialSignIn('Facebook')">
+                <img src="assets/facebook.png" alt="Facebook">
+            </button>
+        </div>
+
+        <p id="message" class="text-center mt-4"></p>
+    </form>
+
+    <!-- Модальное окно для подтверждения -->
+    <div id="socialLoginModal" class="social-login-modal">
+        <div class="segment">
+            <h3 id="modalTitle">Sign in with</h3>
+        </div>
+        <p class="text-sm text-center">By continuing, you agree to link your account to this device.</p>
+        <button id="continueButton" class="social-button" type="button">Agree</button>
+        <button class="social-button" type="button" onclick="closeModal()">Close</button>
+    </div>
+
+    <!-- Новый дашборд -->
+    <div id="dashboard" class="dashboard">
+        <div class="segment">
+            <h1>Triad Networks</h1>
+        </div>
+
+        <!-- Приветственный баннер -->
+        <div class="banner">
+            <h2>Welcome to Triad Networks!</h2>
+            <p>Join a decentralized network that plants trees with every transaction, building a sustainable future.</p>
+        </div>
+
+        <!-- Статистика сети -->
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalNodes">0</h3>
+                <p>Active Nodes</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="totalTransactions">0</h3>
+                <p>Transactions</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="treesPlanted">0</h3>
+                <p>Trees Planted</p>
+            </div>
+        </div>
+
+        <!-- Информация о пользователе -->
+        <div class="segment">
+            <h3>Your Profile</h3>
+            <p>Email: <span id="userEmail"></span></p>
+            <p>Balance: <span id="balance">0</span> TRIAD</p>
+            <p>QLI: <span id="qli"></span></p>
+            <div class="progress-bar">
+                <div class="progress" id="treeProgress" style="width: 0%"></div>
+            </div>
+            <p class="text-sm mt-1">Trees Planted: <span id="userTrees">0</span> (Next tree at 100 transactions)</p>
+        </div>
+
+        <!-- Варианты действий -->
+        <div class="actions">
+            <button class="green" type="button" onclick="plantTree()">Plant a Tree</button>
+            <button class="blue" type="button" onclick="joinNode()">Join a Node</button>
+            <button class="blue" type="button" onclick="sendTransactionPrompt()">Send Transaction</button>
+        </div>
+
+        <!-- Консоль -->
+        <div class="segment">
+            <h3>Console</h3>
+            <div class="console" id="consoleLogs">
+                <p class="console-log">Welcome to Triad Networks Console!</p>
+            </div>
+            <input type="text" class="console-input" id="consoleInput" placeholder="Enter command (e.g., send 10 to user@example.com)" onkeypress="if(event.key === 'Enter') executeCommand()"/>
+        </div>
+
+        <!-- Дополнительные действия -->
+        <div class="segment">
+            <button type="button" onclick="getNodes()">Get Nodes</button>
+            <button type="button" onclick="getTokens()">Get Tokens</button>
+            <button type="button" onclick="getTrees()">Get Trees</button>
+        </div>
+
+        <button class="red" type="button" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        let ws = new WebSocket('ws://localhost:8080/ws');
+        let currentEmail = null;
+        let deviceID = null;
+
+        // Генерация Device ID
+        async function generateDeviceID() {
+            const userAgent = navigator.userAgent;
+            const platform = navigator.platform;
+            const language = navigator.language;
+            let batteryLevel = 'unknown';
+
+            if (navigator.getBattery) {
+                const battery = await navigator.getBattery();
+                batteryLevel = battery.level * 100;
+            }
+
+            const rawID = `${userAgent}-${platform}-${language}-${batteryLevel}-${Date.now()}`;
+            let hash = 0;
+            for (let i = 0; i < rawID.length; i++) {
+                const char = rawID.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return `device_${Math.abs(hash)}`;
+        }
+
+        // Валидация пароля: минимум одна заглавная буква и один специальный символ
+        function validatePassword(password) {
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+            return hasUpperCase && hasSpecialChar;
+        }
+
+        // Добавление лога в консоль
+        function addConsoleLog(message) {
+            const consoleLogs = document.getElementById('consoleLogs');
+            const log = document.createElement('p');
+            log.className = 'console-log';
+            log.innerText = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleLogs.appendChild(log);
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        }
+
+        // Выполнение команды из консоли
+        function executeCommand() {
+            const input = document.getElementById('consoleInput');
+            const command = input.value.trim();
+            if (!command) return;
+
+            addConsoleLog(`> ${command}`);
+            input.value = '';
+
+            // Парсинг команды
+            const parts = command.split(' ');
+            if (parts[0].toLowerCase() === 'send' && parts.length === 4 && parts[2].toLowerCase() === 'to') {
+                const amount = parseFloat(parts[1]);
+                const toEmail = parts[3];
+                if (!isNaN(amount) && amount > 0 && toEmail) {
+                    ws.send(JSON.stringify({
+                        action: 'sendTransaction',
+                        transaction: {
+                            from: currentEmail,
+                            to: toEmail,
+                            amount: amount
+                        },
+                        userData: { email: currentEmail }
+                    }));
+                } else {
+                    addConsoleLog('Invalid command format. Use: send <amount> to <email>');
+                }
+            } else if (command.toLowerCase() === 'plant tree') {
+                plantTree();
+            } else if (command.toLowerCase() === 'join node') {
+                joinNode();
+            } else {
+                addConsoleLog('Unknown command. Available commands: send <amount> to <email>, plant tree, join node');
+            }
+        }
+
+        // Открытие модального окна
+        function openModal(title, onAgree) {
+            const modal = document.getElementById('socialLoginModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const continueButton = document.getElementById('continueButton');
+
+            if (modal && modalTitle && continueButton) {
+                modalTitle.innerText = title;
+                continueButton.onclick = onAgree;
+                modal.classList.add('active');
+            }
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            const modal = document.getElementById('socialLoginModal');
+            if (modal) {
+                modal.classList.remove('active');
+            }
+        }
+
+        // Переход на дашборд
+        function showDashboard(email) {
+            // Полностью скрываем форму логина
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.style.display = 'none';
+            }
+
+            // Показываем дашборд
+            const dashboard = document.getElementById('dashboard');
+            if (dashboard) {
+                dashboard.classList.add('active');
+                dashboard.style.display = 'block';
+            }
+
+            document.getElementById('userEmail').innerText = email;
+            document.getElementById('balance').innerText = 100; // Пока статическое значение
+            document.getElementById('qli').innerText = 0; // Пока статическое значение
+            getTrees();
+            getNodes();
+            getTransactions();
+        }
+
+        // WebSocket-соединение
+        ws.onopen = () => {
+            console.log('Connected to WebSocket server');
+            addConsoleLog('Connected to Triad Networks server');
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            const loginMessage = document.getElementById('message');
+
+            if (message.status === 'error') {
+                if (message.action === 'register') {
+                    loginMessage.innerText = message.message || 'Registration failed';
+                    loginMessage.className = 'error text-center mt-4';
+                } else if (message.action === 'login') {
+                    loginMessage.innerText = message.message || 'Login failed';
+                    loginMessage.className = 'error text-center mt-4';
+                } else {
+                    addConsoleLog(`Error: ${message.message || 'Action failed'}`);
+                }
+                return;
+            }
+
+            if (message.status === 'success') {
+                if (message.action === 'register') {
+                    currentEmail = message.userData.email;
+                    openModal('Confirm Registration', () => {
+                        closeModal();
+                        showDashboard(currentEmail);
+                    });
+                    return;
+                } else if (message.action === 'login') {
+                    currentEmail = message.userData.email;
+                    openModal('Confirm Login', () => {
+                        closeModal();
+                        showDashboard(currentEmail);
+                    });
+                    return;
+                }
+                addConsoleLog(message.message || 'Action completed');
+            }
+
+            if (message.action === 'userUpdated') {
+                document.getElementById('balance').innerText = message.user.balance || 0;
+                document.getElementById('qli').innerText = message.qli || 0;
+            } else if (message.action === 'transaction') {
+                document.getElementById('balance').innerText = message.user.balance || 0;
+                document.getElementById('totalTransactions').innerText = parseInt(document.getElementById('totalTransactions').innerText) + 1;
+                addConsoleLog(`Transaction sent: ${message.transaction.amount} TRIAD to ${message.transaction.to}`);
+                getTransactions();
+            } else if (message.action === 'joinNode') {
+                addConsoleLog('Joined a node successfully');
+            } else if (message.transactions) {
+                const transactionCount = message.transactions.length;
+                document.getElementById('totalTransactions').innerText = transactionCount;
+                const userTransactions = message.transactions.filter(tx => tx.from === currentEmail || tx.to === currentEmail);
+                const userTransactionCount = userTransactions.length;
+                document.getElementById('userTrees').innerText = Math.floor(userTransactionCount / 100);
+                document.getElementById('treeProgress').style.width = `${(userTransactionCount % 100)}%`;
+            } else if (message.nodes) {
+                document.getElementById('totalNodes').innerText = message.nodes.length;
+                addConsoleLog('Nodes: ' + message.nodes.join(', '));
+            } else if (message.tokens) {
+                addConsoleLog('Tokens: ' + message.tokens);
+            } else if (message.trees) {
+                document.getElementById('treesPlanted').innerText = message.trees || 0;
+                document.getElementById('userTrees').innerText = message.trees || 0;
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('Disconnected from WebSocket server');
+            addConsoleLog('Disconnected from server');
+            logout();
+        };
+
+        // Регистрация
+        async function register() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const emailError = document.getElementById('emailError');
+            const passwordError = document.getElementById('passwordError');
+            const message = document.getElementById('message');
+
+            emailError.innerText = '';
+            passwordError.innerText = '';
+            message.innerText = '';
+
+            if (!email) {
+                emailError.innerText = 'Email is required';
+                return;
+            }
+
+            if (!password) {
+                passwordError.innerText = 'Password is required';
+                return;
+            }
+
+            if (!validatePassword(password)) {
+                passwordError.innerText = 'Password must contain at least one uppercase letter and one special character (!@#$%^&*(),.?":{}|<>)';
+                return;
+            }
+
+            deviceID = await generateDeviceID();
+            currentEmail = email;
+            const userData = {
+                email: email,
+                password: password,
+                balance: 100,
+                pocContribution: {
+                    transactionsValidated: 0,
+                    computations: 0,
+                    adsServed: 0,
+                    dataShared: 0,
+                    storageProvided: 0
+                }
+            };
+
+            ws.send(JSON.stringify({
+                action: 'register',
+                userData: userData,
+                deviceID: deviceID
+            }));
+
+            // Временная имитация успешной регистрации
+            setTimeout(() => {
+                openModal('Confirm Registration', () => {
+                    closeModal();
+                    showDashboard(email);
+                });
+            }, 1000);
+        }
+
+        // Логин
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const emailError = document.getElementById('emailError');
+            const passwordError = document.getElementById('passwordError');
+            const message = document.getElementById('message');
+
+            emailError.innerText = '';
+            passwordError.innerText = '';
+            message.innerText = '';
+
+            if (!email) {
+                emailError.innerText = 'Email is required';
+                return;
+            }
+
+            if (!password) {
+                passwordError.innerText = 'Password is required';
+                return;
+            }
+
+            if (!validatePassword(password)) {
+                passwordError.innerText = 'Password must contain at least one uppercase letter and one special character (!@#$%^&*(),.?":{}|<>)';
+                return;
+            }
+
+            deviceID = await generateDeviceID();
+            currentEmail = email;
+
+            ws.send(JSON.stringify({
+                action: 'login',
+                userData: {
+                    email: email,
+                    password: password
+                },
+                deviceID: deviceID
+            }));
+        }
+
+        // Логаут
+        function logout() {
+            currentEmail = null;
+            deviceID = null;
+            const dashboard = document.getElementById('dashboard');
+            const loginForm = document.getElementById('loginForm');
+            if (dashboard) {
+                dashboard.classList.remove('active');
+                dashboard.style.display = 'none';
+            }
+            if (loginForm) {
+                loginForm.style.display = 'block';
+                loginForm.classList.add('active');
+            }
+            document.getElementById('email').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('message').innerText = '';
+        }
+
+        // Социальная авторизация
+        async function socialLogin(provider) {
+            const message = document.getElementById('message');
+            if (!userProfile) {
+                message.innerText = 'Please complete the social login first.';
+                message.className = 'error';
+                return;
+            }
+
+            deviceID = await generateDeviceID();
+            currentEmail = userProfile.email;
+
+            const userData = {
+                email: currentEmail,
+                password: 'social_' + deviceID,
+                balance: 100,
+                pocContribution: {
+                    transactionsValidated: 0,
+                    computations: 0,
+                    adsServed: 0,
+                    dataShared: 0,
+                    storageProvided: 0
+                }
+            };
+
+            ws.send(JSON.stringify({
+                action: 'register',
+                userData: userData,
+                deviceID: deviceID
+            }));
+
+            showDashboard(currentEmail);
+            closeModal();
+            getTrees();
+        }
+
+        // Действия
+        function plantTree() {
+            addConsoleLog('Tree planting initiated! Complete a transaction to contribute.');
+        }
+
+        function joinNode() {
+            ws.send(JSON.stringify({
+                action: 'joinNode',
+                userData: { email: currentEmail }
+            }));
+        }
+
+        function sendTransactionPrompt() {
+            const toEmail = prompt('Enter recipient email:');
+            const amount = parseFloat(prompt('Enter amount:'));
+            if (!toEmail || !amount || amount <= 0) {
+                addConsoleLog('Invalid transaction data');
+                return;
+            }
+
+            ws.send(JSON.stringify({
+                action: 'sendTransaction',
+                transaction: {
+                    from: currentEmail,
+                    to: toEmail,
+                    amount: amount
+                },
+                userData: { email: currentEmail }
+            }));
+        }
+
+        function getNodes() {
+            ws.send(JSON.stringify({
+                action: 'getNodes',
+                userData: { email: currentEmail }
+            }));
+        }
+
+        function getTokens() {
+            ws.send(JSON.stringify({
+                action: 'getTokens',
+                userData: { email: currentEmail }
+            }));
+        }
+
+        function getTrees() {
+            ws.send(JSON.stringify({
+                action: 'getTrees',
+                userData: { email: currentEmail }
+            }));
+        }
+
+        function getTransactions() {
+            ws.send(JSON.stringify({
+                action: 'getTransactions',
+                userData: { email: currentEmail }
+            }));
+        }
+
+        // Социальная авторизация (заглушки)
+        let userProfile = null;
+
+        function triggerSocialSignIn(provider) {
+            if (provider === 'Google') {
+                userProfile = { email: 'google_user@example.com', fullName: 'Google User' };
+                openModal('Sign in with Google', () => socialLogin('Google'));
+            } else if (provider === 'Facebook') {
+                userProfile = { email: 'fb_user@example.com', fullName: 'FB User' };
+                openModal('Sign in with Facebook', () => socialLogin('Facebook'));
+            } else if (provider === 'Twitter') {
+                userProfile = { email: 'twitter_user@example.com', fullName: 'Twitter User' };
+                openModal('Sign in with Twitter', () => socialLogin('Twitter'));
+            } else if (provider === 'Apple') {
+                userProfile = { email: 'apple_user@example.com', FullName: 'Apple User' };
+                openModal('Sign in with Apple', () => socialLogin('Apple'));
+            }
+        }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet">
+</body>
+</html>

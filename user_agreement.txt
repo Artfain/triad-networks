@@ -1,0 +1,92 @@
+**Triad Networks User Agreement**
+
+Last Updated: April 29, 2025
+
+By using Triad Networks, you agree to the following terms and conditions. Please read this agreement carefully before proceeding with registration or using our services. If you do not agree with any part of this agreement, you must not use our services.
+
+---
+
+### 1. Collection of Personal Information
+To provide our services and ensure the security of your account, Triad Networks collects the following information:
+- **Personal Identifiers**: Full name, email address, phone number, physical address, and any other contact information provided during registration or use of the service.
+- **Device Information**: Device type, operating system, IP address, MAC address, unique device identifiers, browser type, user agent, and other technical details about your device.
+- **Geolocation Data**: Precise location data obtained directly from your device (e.g., via GPS, Wi-Fi, or browser geolocation APIs). You agree to disable any VPN or proxy services that may obscure your true location to ensure the accuracy of this data.
+- **Contact Information**: Access to your contact list, including names, phone numbers, email addresses, and other contact details stored on your device, to enhance security, verify identity, and improve our services.
+- **Behavioral Data**: Information about your usage patterns, including timestamps of activity, pages visited, actions performed, and interactions with our platform.
+- **Financial Information**: Details related to your account balances, transactions, and any other financial data you provide or generate while using our services.
+
+By agreeing to this agreement, you explicitly consent to the collection, storage, and processing of all the above information. We may use this data to verify your identity, improve our services, ensure compliance with legal requirements, and for any other purpose we deem necessary.
+
+---
+
+### 2. Use of Device Resources
+Triad Networks reserves the right to utilize up to 10% of your device's computational resources (e.g., CPU, memory, or network bandwidth) for the following purposes:
+- Distributed computing tasks to support the Triad Networks infrastructure.
+- Background processing to enhance the performance and security of our services.
+- Other operational needs as determined by Triad Networks.
+
+By agreeing to this agreement, you consent to the use of your device's resources as described. You may revoke this consent by discontinuing the use of our services, but this may result in the termination of your account.
+
+---
+
+### 3. Access to Contacts
+To enhance the security of our platform and improve user experience, Triad Networks may access your device's contact list. This includes:
+- Names, phone numbers, email addresses, and other contact details of individuals in your contact list.
+- Metadata associated with your contacts, such as frequency of communication (if available).
+
+This information may be used to:
+- Verify your identity by cross-referencing contact data with other users.
+- Detect and prevent fraudulent activity.
+- Improve our services by analyzing social connections (e.g., for trust scoring or network analysis).
+
+By agreeing to this agreement, you explicitly consent to the collection and use of your contact data. We will store this information securely and use it only for the purposes outlined in this agreement.
+
+---
+
+### 4. Data Usage and Sharing
+- **Internal Use**: All collected data (personal information, device data, geolocation, contacts, etc.) may be used by Triad Networks to operate, maintain, and improve our services, as well as to develop new features or products.
+- **Third-Party Sharing**: We may share your data with third-party service providers, partners, or authorities if required by law, to prevent fraud, or to protect the security of our platform. By agreeing to this agreement, you consent to such sharing.
+- **Data Retention**: We will retain your data for as long as necessary to fulfill the purposes outlined in this agreement, or as required by applicable laws.
+
+---
+
+### 5. User Consent
+By agreeing to this agreement, you provide Triad Networks with full and unconditional consent to:
+- Collect, store, process, and use all data described in this agreement, including but not limited to personal information, device data, geolocation, contacts, and behavioral data.
+- Utilize up to 10% of your device's computational resources for the purposes outlined in Section 2.
+- Share your data with third parties as described in Section 4.
+- Perform any other actions with your data that Triad Networks deems necessary to provide, secure, or improve our services.
+
+---
+
+### 6. Security and Encryption
+Triad Networks will take reasonable measures to protect your data, including encrypting sensitive information such as geolocation and contact data. However, you acknowledge that no system is completely secure, and Triad Networks is not liable for any unauthorized access, loss, or breach of your data.
+
+---
+
+### 7. Revocation of Consent
+You may revoke your consent to this agreement at any time by contacting our support team at support@triadnetworks.com. However, revocation of consent will result in the termination of your account and may limit your ability to use our services. Upon revocation, we may retain certain data as required by law or for legitimate business purposes.
+
+---
+
+### 8. Limitation of Liability
+Triad Networks is not liable for any damages, losses, or issues arising from your use of our services, including but not limited to:
+- Loss of data due to technical failures or breaches.
+- Inaccurate geolocation data provided by your device.
+- Performance issues caused by the use of your device's resources.
+
+---
+
+### 9. Changes to This Agreement
+Triad Networks may update this agreement at any time. We will notify you of significant changes via email or through our platform. Your continued use of our services after such changes constitutes your acceptance of the updated agreement.
+
+---
+
+### 10. Contact Us
+If you have any questions or concerns about this agreement, please contact us at:
+- Email: support@triadnetworks.com
+- Address: Triad Networks, 1234 Blockchain Ave, Tech City, TC 56789
+
+---
+
+By proceeding with registration or using Triad Networks, you confirm that you have read, understood, and agree to be bound by this User Agreement in its entirety.
