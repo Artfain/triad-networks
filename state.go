@@ -1,129 +1,191 @@
 package main
 
 import (
-	"errors"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"math/big"
 	"sync"
 )
 
-// Определяем ошибки
-var (
-	ErrUserNotFound        = errors.New("user not found")
-	ErrDeviceNotFound      = errors.New("device not found")
-	ErrInsufficientBalance = errors.New("insufficient balance")
-)
-
-// State manages the global state of the Triad Network
 type State struct {
-	users   map[string]UserData
-	devices map[string][]string // address -> device IDs
-	nodes   []string
-	tokens  map[string]float64
-	mu      sync.Mutex
+	users map[string]UserData
+	nodes []string
+	mutex sync.Mutex
 }
 
-// NewState initializes a new State
 func NewState() *State {
 	return &State{
-		users:   make(map[string]UserData),
-		devices: make(map[string][]string),
-		nodes:   []string{"node1", "node2", "node3"},
-		tokens:  make(map[string]float64),
+		users: make(map[string]UserData),
 	}
 }
 
-// AddUser adds a new user to the state
-func (s *State) AddUser(address string, data UserData) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *State) AddUser(address, deviceID string, data UserData, tree *TriadTree, qli string) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	data.Balance = 1000
+	data.LastNonce = 0
+	data.Reputation = NewReputation()
+	data.Devices = []string{deviceID}
 	s.users[address] = data
-	s.tokens[address] = data.Balance
+
+	if err := tree.AddUser(address, deviceID, data, qli); err != nil {
+		return fmt.Errorf("failed to add user to TriadTree: %v", err)
+	}
+	if err := StoreData(address, deviceID, data); err != nil {
+		return fmt.Errorf("failed to store user data: %v", err)
+	}
+	return nil
 }
 
-// UpdateUser updates an existing user's data
 func (s *State) UpdateUser(address string, data UserData) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.users[address] = data
-	s.tokens[address] = data.Balance
 }
 
-// ExecuteTransaction performs a transaction between two users
-func (s *State) ExecuteTransaction(from, to string, amount float64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *State) VerifyTransaction(tx Transaction) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[tx.From]
+	if !exists {
+		return fmt.Errorf("user %s not found", tx.From)
+	}
+	if user.Balance < tx.Amount {
+		return fmt.Errorf("insufficient balance")
+	}
+	if tx.Nonce <= user.LastNonce {
+		return fmt.Errorf("invalid nonce")
+	}
+	hash := sha256.Sum256([]byte(fmt.Sprintf("%s%s%d%d%d%s", tx.From, tx.To, tx.Amount, tx.Timestamp, tx.Nonce, tx.PrevHash)))
+	sigBytes, err := hex.DecodeString(tx.Signature)
+	if err != nil {
+		return fmt.Errorf("decode signature: %v", err)
+	}
+	sigR := new(big.Int).SetBytes(sigBytes[:len(sigBytes)/2])
+	sigS := new(big.Int).SetBytes(sigBytes[len(sigBytes)/2:])
+	pubKeyBytes, err := hex.DecodeString(user.PublicKey)
+	if err != nil {
+		return fmt.Errorf("decode public key: %v", err)
+	}
+	x := new(big.Int).SetBytes(pubKeyBytes[:len(pubKeyBytes)/2])
+	y := new(big.Int).SetBytes(pubKeyBytes[len(pubKeyBytes)/2:])
+	pubKey := &ecdsa.PublicKey{Curve: elliptic.P256(), X: x, Y: y}
+	if !ecdsa.Verify(pubKey, hash[:], sigR, sigS) {
+		return fmt.Errorf("invalid signature")
+	}
+	return nil
+}
 
+func (s *State) ExecuteTransaction(from, to string, amount int64, nonce uint64) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	fromUser, exists := s.users[from]
 	if !exists {
-		return ErrUserNotFound
+		return fmt.Errorf("user %s not found", from)
+	}
+	if fromUser.Balance < amount {
+		return fmt.Errorf("insufficient balance")
 	}
 	toUser, exists := s.users[to]
 	if !exists {
-		return ErrUserNotFound
+		return fmt.Errorf("recipient %s not found", to)
 	}
-	if fromUser.Balance < amount {
-		return ErrInsufficientBalance
-	}
-
 	fromUser.Balance -= amount
+	fromUser.LastNonce = nonce
 	toUser.Balance += amount
 	s.users[from] = fromUser
 	s.users[to] = toUser
-	s.tokens[from] = fromUser.Balance
-	s.tokens[to] = toUser.Balance
 	return nil
 }
 
-// AddDevice associates a device with a user
 func (s *State) AddDevice(address, deviceID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.users[address]; !exists {
-		return ErrUserNotFound
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[address]
+	if !exists {
+		return fmt.Errorf("user %s not found", address)
 	}
-	s.devices[address] = append(s.devices[address], deviceID)
+	for _, id := range user.Devices {
+		if id == deviceID {
+			return fmt.Errorf("device already added")
+		}
+	}
+	user.Devices = append(user.Devices, deviceID)
+	s.users[address] = user
 	return nil
 }
 
-// GetDevices returns the list of devices for a user
-func (s *State) GetDevices(address string) ([]string, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.users[address]; !exists {
-		return nil, ErrUserNotFound
-	}
-	return s.devices[address], nil
-}
-
-// RemoveDevice removes a device from a user
 func (s *State) RemoveDevice(address, deviceID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if _, exists := s.users[address]; !exists {
-		return ErrUserNotFound
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[address]
+	if !exists {
+		return fmt.Errorf("user %s not found", address)
 	}
-	devices := s.devices[address]
-	for i, id := range devices {
+	for i, id := range user.Devices {
 		if id == deviceID {
-			s.devices[address] = append(devices[:i], devices[i+1:]...)
+			user.Devices = append(user.Devices[:i], user.Devices[i+1:]...)
+			s.users[address] = user
 			return nil
 		}
 	}
-	return ErrDeviceNotFound
+	return fmt.Errorf("device not found")
 }
 
-// GetNodes returns the list of nodes
+func (s *State) GetDevices(address string) ([]string, error) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[address]
+	if !exists {
+		return nil, fmt.Errorf("user %s not found", address)
+	}
+	return user.Devices, nil
+}
+
+func (s *State) AddNode(node string) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for _, n := range s.nodes {
+		if n == node {
+			return
+		}
+	}
+	s.nodes = append(s.nodes, node)
+}
+
 func (s *State) GetNodes() []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	return s.nodes
 }
 
-// GetTokens returns the token balance for a user
-func (s *State) GetTokens(address string) float64 {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.tokens[address]
+func (s *State) GetTokens(address string) int64 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[address]
+	if !exists {
+		return 0
+	}
+	return user.Balance
+}
+
+func (s *State) GetParticipantCount() int {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	return len(s.users)
+}
+
+func (s *State) UpdateReputation(address string, uptime uint64, isHonest bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	user, exists := s.users[address]
+	if !exists {
+		return
+	}
+	user.Reputation = UpdateReputation(user.Reputation, uptime, isHonest)
+	s.users[address] = user
 }

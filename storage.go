@@ -1,126 +1,206 @@
 package main
 
 import (
-	"bytes"
-	"errors"
+	"crypto/sha256"
+	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"log"
+	"strings"
 
-	"github.com/ugorji/go/codec"
-	"go.etcd.io/bbolt"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
-var cborHandle = &codec.CborHandle{}
-var db *bbolt.DB
+var db *leveldb.DB
 
-const (
-	usersBucket        = "users"
-	transactionsBucket = "transactions"
-)
-
-// init открывает базу данных при старте приложения
-func init() {
+func initDB() (*leveldb.DB, error) {
 	var err error
-	db, err = bbolt.Open("triad.db", 0600, nil)
+	db, err = leveldb.OpenFile("./data.db", nil)
 	if err != nil {
-		log.Fatal("Error opening database:", err)
+		return nil, fmt.Errorf("failed to open DB: %v", err)
 	}
-
-	// Создаём бакеты, если их нет
-	err = db.Update(func(tx *bbolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(usersBucket))
-		if err != nil {
-			return err
-		}
-		_, err = tx.CreateBucketIfNotExists([]byte(transactionsBucket))
-		return err
-	})
-	if err != nil {
-		log.Fatal("Error creating buckets:", err)
-	}
+	return db, nil
 }
 
-func StoreData(address string, data UserData) error {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, cborHandle)
-	if err := enc.Encode(data); err != nil {
+func StoreData(address, deviceID string, data UserData) error {
+	db, err := initDB()
+	if err != nil {
 		return err
 	}
-
-	return db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(usersBucket))
-		return bucket.Put([]byte(address), buf.Bytes())
-	})
+	defer db.Close()
+	key := []byte(fmt.Sprintf("user:%s:%s", address, deviceID))
+	userData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("marshal user data: %v", err)
+	}
+	return db.Put(key, userData, nil)
 }
 
-func GetData(address string) (UserData, error) {
-	var userData UserData
-
-	err := db.View(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(usersBucket))
-		data := bucket.Get([]byte(address))
-		if data == nil {
-			return errors.New("user not found")
-		}
-
-		dec := codec.NewDecoder(bytes.NewReader(data), cborHandle)
-		return dec.Decode(&userData)
-	})
-
+func GetData(address, deviceID string) (UserData, error) {
+	db, err := initDB()
 	if err != nil {
 		return UserData{}, err
+	}
+	defer db.Close()
+	key := []byte(fmt.Sprintf("user:%s:%s", address, deviceID))
+	data, err := db.Get(key, nil)
+	if err != nil {
+		return UserData{}, fmt.Errorf("get user data: %v", err)
+	}
+	var userData UserData
+	if err := json.Unmarshal(data, &userData); err != nil {
+		return UserData{}, fmt.Errorf("unmarshal user data: %v", err)
 	}
 	return userData, nil
 }
 
-func UpdateData(address string, qli string, diff UserData) error {
-	currentData, err := GetData(address)
-	if err != nil {
-		return err
-	}
-
-	updatedData := UserData{
-		Address:         currentData.Address,
-		Balance:         diff.Balance,
-		PoCContribution: diff.PoCContribution,
-	}
-	return StoreData(address, updatedData)
+func UpdateData(address, deviceID string, data UserData) error {
+	return StoreData(address, deviceID, data)
 }
 
 func StoreTransaction(tx Transaction) error {
-	var buf bytes.Buffer
-	enc := codec.NewEncoder(&buf, cborHandle)
-	if err := enc.Encode(tx); err != nil {
+	db, err := initDB()
+	if err != nil {
 		return err
 	}
+	defer db.Close()
+	lastTxHash, err := getLastTransactionHash(tx.From)
+	if err != nil && err != leveldb.ErrNotFound {
+		return fmt.Errorf("get last tx hash: %v", err)
+	}
+	tx.PrevHash = lastTxHash
+	key := []byte(fmt.Sprintf("tx:%s:%d", tx.From, tx.Timestamp))
+	data, err := json.Marshal(tx)
+	if err != nil {
+		return fmt.Errorf("marshal tx: %v", err)
+	}
+	if err := db.Put(key, data, nil); err != nil {
+		return fmt.Errorf("store tx: %v", err)
+	}
+	hash := sha256.Sum256(data)
+	lastHashKey := []byte(fmt.Sprintf("last_tx:%s", tx.From))
+	return db.Put(lastHashKey, hash[:], nil)
+}
 
-	key := fmt.Sprintf("%s:%s:%d", tx.From, tx.To, tx.Timestamp)
-	return db.Update(func(txn *bbolt.Tx) error {
-		bucket := txn.Bucket([]byte(transactionsBucket))
-		return bucket.Put([]byte(key), buf.Bytes())
-	})
+func getLastTransactionHash(address string) (string, error) {
+	db, err := initDB()
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+	key := []byte(fmt.Sprintf("last_tx:%s", address))
+	data, err := db.Get(key, nil)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(data), nil
 }
 
 func GetTransactions(address string) ([]Transaction, error) {
-	var transactions []Transaction
-
-	err := db.View(func(txn *bbolt.Tx) error {
-		bucket := txn.Bucket([]byte(transactionsBucket))
-		return bucket.ForEach(func(k, v []byte) error {
-			var tx Transaction
-			dec := codec.NewDecoder(bytes.NewReader(v), cborHandle)
-			if err := dec.Decode(&tx); err != nil {
-				return err
-			}
-			if tx.From == address || tx.To == address {
-				transactions = append(transactions, tx)
-			}
-			return nil
-		})
-	})
-
+	db, err := initDB()
 	if err != nil {
 		return nil, err
 	}
-	return transactions, nil
+	defer db.Close()
+	var transactions []Transaction
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
+	for iter.Next() {
+		key := string(iter.Key())
+		if strings.HasPrefix(key, "tx:"+address+":") {
+			var tx Transaction
+			if err := json.Unmarshal(iter.Value(), &tx); err != nil {
+				return nil, fmt.Errorf("unmarshal tx: %v", err)
+			}
+			transactions = append(transactions, tx)
+		}
+	}
+	return transactions, iter.Error()
+}
+
+func UpdateTreesPlanted(computations uint64) error {
+	db, err := initDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	key := []byte("trees")
+	data, err := db.Get(key, nil)
+	var trees uint64
+	if err == nil {
+		trees = binary.BigEndian.Uint64(data)
+	}
+	trees += computations
+	data = make([]byte, 8)
+	binary.BigEndian.PutUint64(data, trees)
+	return db.Put(key, data, nil)
+}
+
+func GetTreesPlanted() (uint64, error) {
+	db, err := initDB()
+	if err != nil {
+		return 0, err
+	}
+	defer db.Close()
+	data, err := db.Get([]byte("trees"), nil)
+	if err != nil {
+		return 0, err
+	}
+	return binary.BigEndian.Uint64(data), nil
+}
+
+func UpdateUptime(address, deviceID string, uptime uint64) error {
+	db, err := initDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	userData, err := GetData(address, deviceID)
+	if err != nil {
+		return err
+	}
+	userData.PoCContribution.Uptime += uptime
+	return UpdateData(address, deviceID, userData)
+}
+
+func UpdateStorage(address, deviceID string, storage uint64) error {
+	db, err := initDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	userData, err := GetData(address, deviceID)
+	if err != nil {
+		return err
+	}
+	userData.PoCContribution.Storage += storage
+	return UpdateData(address, deviceID, userData)
+}
+
+func UpdateBandwidth(address, deviceID string, bandwidth uint64) error {
+	db, err := initDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	userData, err := GetData(address, deviceID)
+	if err != nil {
+		return err
+	}
+	userData.PoCContribution.Bandwidth += bandwidth
+	return UpdateData(address, deviceID, userData)
+}
+
+func UpdateEcoActions(address, deviceID string, ecoActions uint64) error {
+	db, err := initDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	userData, err := GetData(address, deviceID)
+	if err != nil {
+		return err
+	}
+	userData.PoCContribution.EcoActions += ecoActions
+	return UpdateData(address, deviceID, userData)
 }

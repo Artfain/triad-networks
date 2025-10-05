@@ -1,22 +1,19 @@
 package main
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 )
 
-// CreateQLI generates a Quantum Ledger Identifier for a user
-func CreateQLI(data UserData) (string, error) {
-	input := fmt.Sprintf("%s:%f:%d:%d:%d:%d:%d",
-		data.Address,
-		data.Balance,
-		data.PoCContribution.TransactionsValidated,
-		data.PoCContribution.Computations,
-		data.PoCContribution.AdsServed,
-		data.PoCContribution.DataShared,
-		data.PoCContribution.StorageProvided,
-	)
-	hash := sha256.Sum256([]byte(input))
-	return hex.EncodeToString(hash[:]), nil
+func CreateQLI(address, deviceID string) (string, *ecdsa.PrivateKey, error) {
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to generate key: %v", err)
+	}
+	hash := sha256.Sum256([]byte(address + deviceID))
+	qli := fmt.Sprintf("%x", hash)
+	return qli, privKey, nil
 }

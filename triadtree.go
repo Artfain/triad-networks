@@ -1,33 +1,40 @@
 package main
 
-import "errors"
+import (
+	"fmt"
+	"sync"
+)
 
-// TriadTree represents the structure for managing users in a triad-based tree
 type TriadTree struct {
-	users map[string]UserData
+	sync.Mutex
+	users map[string]map[string]UserData
 	qlis  map[string]string
 }
 
-// NewTriadTree initializes a new TriadTree
 func NewTriadTree() *TriadTree {
 	return &TriadTree{
-		users: make(map[string]UserData),
+		users: make(map[string]map[string]UserData),
 		qlis:  make(map[string]string),
 	}
 }
 
-// AddUser adds a user to the TriadTree with their QLI
-func (t *TriadTree) AddUser(address string, data UserData, qli string) error {
-	t.users[address] = data
-	t.qlis[address] = qli
+func (t *TriadTree) AddUser(address, deviceID string, userData UserData, qli string) error {
+	t.Lock()
+	defer t.Unlock()
+	if _, exists := t.users[address]; !exists {
+		t.users[address] = make(map[string]UserData)
+	}
+	t.users[address][deviceID] = userData
+	t.qlis[address+":"+deviceID] = qli
 	return nil
 }
 
-// GetUser retrieves the QLI for a user
-func (t *TriadTree) GetUser(address string) (string, error) {
-	qli, exists := t.qlis[address]
+func (t *TriadTree) GetUser(address, deviceID string) (string, error) {
+	t.Lock()
+	defer t.Unlock()
+	qli, exists := t.qlis[address+":"+deviceID]
 	if !exists {
-		return "", errors.New("user not found in triad tree")
+		return "", fmt.Errorf("user %s with device %s not found", address, deviceID)
 	}
 	return qli, nil
 }
