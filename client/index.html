@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triad Networks Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #dashboard { display: flex; flex-direction: column; gap: 20px; }
+        .section { border: 1px solid #ccc; padding: 10px; }
+        canvas { max-width: 100%; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div id="dashboard">
+        <div class="section">
+            <h2>Your Profile</h2>
+            <label for="deviceSelect">Select Device:</label>
+            <select id="deviceSelect"></select>
+            <p>Address: <span id="address"></span></p>
+            <p>Balance: <span id="balance"></span> TRIAD</p>
+            <p>CPU Usage: <span id="cpuUsage"></span>%</p>
+            <p>Memory Usage: <span id="memoryUsage"></span> MB</p>
+            <p>Storage: <span id="storage"></span> GB</p>
+            <p>Bandwidth: <span id="bandwidth"></span> MB</p>
+            <p>Uptime: <span id="uptime"></span> sec</p>
+            <p>Eco Actions: <span id="ecoActions"></span></p>
+            <p>Reputation: <span id="reputation"></span></p>
+            <p>Tokens Earned: <span id="tokensEarned"></span> TRIAD</p>
+        </div>
+        <div class="section">
+            <h2>Contribute Power</h2>
+            <label for="cpuLoad">CPU Load (%):</label>
+            <input type="number" id="cpuLoad" min="0" max="100" value="50">
+            <button id="startContributing">Start Contributing</button>
+            <button id="stopContributing" disabled>Stop Contributing</button>
+            <button id="getMfaToken">Get MFA Token</button>
+        </div>
+        <div class="section">
+            <h2>Energy Usage</h2>
+            <canvas id="energyChart"></canvas>
+        </div>
+        <div class="section">
+            <h2>Blockchain Explorer</h2>
+            <pre id="blockchain"></pre>
+        </div>
+        <div class="section">
+            <h2>Logs</h2>
+            <pre id="logs"></pre>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ws = new WebSocket('ws://localhost:8080/ws');
+        let contributing = false;
+        let mfaToken = '';
+        let address = 'user1';
+        let deviceId = 'macbook';
+        let chart;
+
+        function logMessage(message) {
+            const logs = document.getElementById('logs');
+            logs.textContent += `${new Date().toLocaleTimeString()}: ${message}\n`;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        function updateDeviceSelect(devices) {
+            const select = document.getElementById('deviceSelect');
+            select.innerHTML = '';
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device;
+                option.textContent = device;
+                select.appendChild(option);
+            });
+            select.value = deviceId;
+        }
+
+        function updateDashboard(data) {
+            document.getElementById('address').textContent = address;
+            document.getElementById('balance').textContent = data.tokensEarned || 0;
+            document.getElementById('cpuUsage').textContent = (data.cpuPerDevice?.[deviceId] || 0).toFixed(2);
+            document.getElementById('memoryUsage').textContent = (data.memoryPerDevice?.[deviceId] || 0).toFixed(2);
+            document.getElementById('storage').textContent = (data.storagePerDevice?.[deviceId] || 0).toFixed(2);
+            document.getElementById('bandwidth').textContent = (data.bandwidthPerDevice?.[deviceId] || 0).toFixed(2);
+            document.getElementById('uptime').textContent = data.uptimePerDevice?.[deviceId] || 0;
+            document.getElementById('ecoActions').textContent = data.ecoActionsPerDevice?.[deviceId] || 0;
+            document.getElementById('reputation').textContent = (data.reputationPerDevice?.[deviceId] || 0).toFixed(3);
+            document.getElementById('tokensEarned').textContent = data.tokensEarned || 0;
+        }
+
+        function updateBlockchain(data) {
+            const blockchain = document.getElementById('blockchain');
+            blockchain.textContent = JSON.stringify(data, null, 2);
+        }
+
+        ws.onopen = () => {
+            logMessage('Connected to WebSocket server');
+            const addUser = {
+                action: 'addUser',
+                userData: {
+                    address: address,
+                    balance: 1000,
+                    devices: [deviceId],
+                    pocContribution: { computations: 0, storage: 0, bandwidth: 0, uptime: 0, ecoActions: 0 }
+                },
+                deviceID: deviceId
+            };
+            ws.send(JSON.stringify(addUser));
+            ws.send(JSON.stringify({ action: 'getDevices', userData: { address: address } }));
+            setInterval(getEnergyUsage, 5000);
+            setInterval(getBlockchain, 10000); // Fetch blockchain every 10 seconds
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+                logMessage(`Received: ${JSON.stringify(data)}`);
+                if (data.mfaToken) {
+                    mfaToken = data.mfaToken;
+                    logMessage(`MFA token updated: ${mfaToken}`);
+                }
+                if (data.status === 'success') {
+                    if (data.devices) {
+                        updateDeviceSelect(data.devices);
+                    }
+                    if (data.totalEnergyUsage !== undefined) {
+                        updateDashboard(data);
+                        const time = new Date().toLocaleTimeString();
+                        chart.data.labels.push(time);
+                        chart.data.datasets[0].data.push(data.totalEnergyUsage / 10);
+                        if (chart.data.labels.length > 20) {
+                            chart.data.labels.shift();
+                            chart.data.datasets[0].data.shift();
+                        }
+                        chart.update();
+                    }
+                    if (data.message === 'Contribution processed and tokens minted') {
+                        getEnergyUsage();
+                    }
+                }
+                if (data.status === 'error') {
+                    logMessage(`Error: ${data.message}`);
+                }
+            } catch (e) {
+                logMessage(`Error parsing message: ${e}`);
+            }
+        };
+
+        ws.onerror = (error) => {
+            logMessage(`WebSocket error: ${error}`);
+        };
+
+        ws.onclose = () => {
+            logMessage('WebSocket closed');
+        };
+
+        function getEnergyUsage() {
+            const request = {
+                action: 'getAllEnergyUsage',
+                userData: { address: address }
+            };
+            ws.send(JSON.stringify(request));
+        }
+
+        function getBlockchain() {
+            const request = {
+                action: 'getBlockchain',
+                userData: { address: address }
+            };
+            ws.send(JSON.stringify(request));
+        }
+
+        document.getElementById('deviceSelect').onchange = (event) => {
+            deviceId = event.target.value;
+            logMessage(`Selected device: ${deviceId}`);
+            getEnergyUsage();
+        };
+
+        document.getElementById('startContributing').onclick = () => {
+            if (!mfaToken) {
+                logMessage('No MFA token available, request one first');
+                return;
+            }
+            contributing = true;
+            document.getElementById('startContributing').disabled = true;
+            document.getElementById('stopContributing').disabled = false;
+            const cpuLoad = parseFloat(document.getElementById('cpuLoad').value);
+            logMessage(`Started contributing power with CPU load ${cpuLoad}%`);
+            const contribute = () => {
+                if (!contributing) return;
+                const data = {
+                    action: 'contributePower',
+                    userData: { address: address },
+                    deviceID: deviceId,
+                    power: { cpuPercent: cpuLoad, memoryMB: cpuLoad * 10 },
+                    storage: 100,
+                    bandwidth: 10,
+                    uptime: 60,
+                    ecoActions: 1,
+                    mfaToken: mfaToken
+                };
+                ws.send(JSON.stringify(data));
+                setTimeout(contribute, 10000);
+            };
+            contribute();
+        };
+
+        document.getElementById('stopContributing').onclick = () => {
+            contributing = false;
+            document.getElementById('startContributing').disabled = false
+            document.getElementById('stopContributing').disabled = true;
+            logMessage('Stopped contributing power');
+        };
+
+        document.getElementById('getMfaToken').onclick = () => {
+            const request = {
+                action: 'getMFAToken',
+                userData: { address: address }
+            };
+            ws.send(JSON.stringify(request));
+        };
+
+        const ctx = document.getElementById('energyChart').getContext('2d');
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'CPU Usage (%)',
+                    data: [],
+                    borderColor: 'blue',
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Time' } },
+                    y: { title: { display: true, text: 'CPU Usage (%)' } }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

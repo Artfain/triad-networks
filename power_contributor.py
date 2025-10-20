@@ -1,122 +1,104 @@
-import os
-import subprocess
-import sys
-import time
-import psutil
 import websocket
 import json
-import threading
-import socket
+import time
+import sys
+import psutil
+import hashlib
+import ecdsa
+import base64
 
-def update_pip():
-    print("Checking pip version...")
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
+def generate_keypair():
+    sk = ecdsa.SigningKey.generate(curve=ecdsa.SECP256k1)
+    vk = sk.get_verifying_key()
+    return sk.to_string().hex(), vk.to_string().hex()
 
-def get_cpu_temp():
-    try:
-        result = subprocess.run(['osx-cpu-temp'], capture_output=True, text=True)
-        temp_str = result.stdout.strip().split()[0]
-        return float(temp_str.replace('°C', ''))
-    except Exception as e:
-        print(f"Error getting CPU temp: {e}")
-        return 0.0
+def sign_message(private_key, message):
+    sk = ecdsa.SigningKey.from_string(bytes.fromhex(private_key), curve=ecdsa.SECP256k1)
+    message_hash = hashlib.sha256(message.encode()).digest()
+    signature = sk.sign(message_hash)
+    return base64.b64encode(signature).decode()
 
-def check_server_connection(host="localhost", port=8080):
-    attempts = 5
-    for i in range(attempts):
-        try:
-            sock = socket.create_connection((host, port), timeout=2)
-            sock.close()
-            return True
-        except socket.error as e:
-            print(f"Attempt {i+1}/{attempts}: Server not available at {host}:{port}, retrying... ({e})")
-            time.sleep(2)
-    return False
-
-def contribute_power(ws, cpu_load, mfa_token, address="user1", device_id="macbook"):
-    while True:
-        cpu_percent = psutil.cpu_percent(interval=1)
-        memory = psutil.virtual_memory()
-        memory_mb = memory.used / (1024 * 1024)
-        storage = psutil.disk_usage('/').used / (1024 * 1024 * 1024)
-        bandwidth = psutil.net_io_counters().bytes_sent / (1024 * 1024)
-        uptime = int(time.time() - psutil.boot_time())
-        eco_actions = 1
-        cpu_temp = get_cpu_temp()
-        if cpu_temp > 85:
-            print("CPU temperature too high, stopping contribution")
-            break
-        data = {
-            "action": "contributePower",
-            "userData": {"address": address},
-            "deviceID": device_id,
-            "power": {"cpuPercent": cpu_percent, "memoryMB": memory_mb},
-            "storage": storage,
-            "bandwidth": bandwidth,
-            "uptime": uptime,
-            "ecoActions": eco_actions,
-            "mfaToken": mfa_token
+def contribute_power(address, device_id, cpu_load):
+    ws = websocket.WebSocket()
+    ws.connect("ws://localhost:8080/ws")
+    
+    # Register user
+    register_msg = {
+        "type": "register",
+        "data": {
+            "address": address,
+            "deviceID": device_id
         }
-        try:
-            ws.send(json.dumps(data))
-            print(f"Contributed: CPU {cpu_percent:.1f}%, Memory {memory_mb:.2f} MB, Storage {storage:.0f} GB, Bandwidth {bandwidth:.0f} MB, Uptime {uptime} sec, EcoActions {eco_actions}")
-        except Exception as e:
-            print(f"Error sending contribution: {e}")
-            break
-        time.sleep(10)
-
-def on_message(ws, message):
-    global mfa_token
-    data = json.loads(message)
-    print(f"Received: {data}")
-    if "mfaToken" in data:
-        mfa_token = data["mfaToken"]
-        print(f"MFA token updated: {mfa_token}")
-
-def on_error(ws, error):
-    print(f"Error: {error}")
-
-def on_close(ws, close_status_code, close_msg):
-    print(f"Closed: {close_msg}")
-
-def on_open(ws):
-    print("Connected to server")
-    data = {
-        "action": "addUser",
-        "userData": {
-            "address": "user1",
-            "balance": 1000,
-            "devices": ["macbook"],
-            "pocContribution": {
-                "computations": 0,
-                "storage": 0,
-                "bandwidth": 0,
-                "uptime": 0,
-                "ecoActions": 0
-            }
-        },
-        "deviceID": "macbook"
     }
-    ws.send(json.dumps(data))
+    ws.send(json.dumps(register_msg))
+    response = json.loads(ws.recv())
+    print(f"Registration response: {response}")
+
+    # Simulate contribution
+    while True:
+        computations = int(cpu_load * 1000)
+        eco_actions = int(cpu_load / 10)
+        trees_planted = eco_actions // 5
+        contribution = {
+            "computations": computations,
+            "storage": psutil.disk_usage('/').free / (1024**3),  # Free disk space in GB
+            "bandwidth": 100.0,  # Simulated bandwidth in Mbps
+            "uptime": int(time.time()),
+            "ecoActions": eco_actions
+        }
+        contribute_msg = {
+            "type": "contribute",
+            "data": {
+                "address": address,
+                "deviceID": device_id,
+                "contribution": contribution,
+                "trees": trees_planted
+            }
+        }
+        ws.send(json.dumps(contribute_msg))
+        response = json.loads(ws.recv())
+        print(f"Contribution response: {response}")
+
+        # Request user data
+        data_msg = {
+            "type": "get_data",
+            "data": {"address": address}
+        }
+        ws.send(json.dumps(data_msg))
+        user_data = json.loads(ws.recv())
+        print(f"User data: {user_data}")
+
+        # Request transactions
+        tx_msg = {
+            "type": "get_transactions",
+            "data": {"address": address}
+        }
+        ws.send(json.dumps(tx_msg))
+        transactions = json.loads(ws.recv())
+        print(f"Transactions: {transactions}")
+
+        # Request trees planted
+        trees_msg = {
+            "type": "get_trees",
+            "data": {"address": address}
+        }
+        ws.send(json.dumps(trees_msg))
+        trees_data = json.loads(ws.recv())
+        print(f"Trees planted: {trees_data}")
+
+        time.sleep(60)  # Contribute every minute
 
 if __name__ == "__main__":
-    update_pip()
-    if not check_server_connection():
-        print("Cannot connect to server, exiting...")
+    if len(sys.argv) != 2:
+        print("Usage: python power_contributor.py <cpu_load>")
         sys.exit(1)
-    websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://localhost:8080/ws",
-                                on_message=on_message,
-                                on_error=on_error,
-                                on_close=on_close,
-                                on_open=on_open)
-    global mfa_token
-    mfa_token = ""
-    cpu_load = float(sys.argv[1]) if len(sys.argv) > 1 else 50.0
-    ws_thread = threading.Thread(target=ws.run_forever)
-    ws_thread.start()
-    time.sleep(2)
-    while not mfa_token:
-        time.sleep(1)
-    print("User added and MFA token received, starting to contribute power")
-    contribute_power(ws, cpu_load, mfa_token)
+    
+    cpu_load = float(sys.argv[1])
+    private_key, public_key = generate_keypair()
+    address = hashlib.sha256(public_key.encode()).hexdigest()[:40]
+    device_id = "macbook"
+    
+    try:
+        contribute_power(address, device_id, cpu_load)
+    except KeyboardInterrupt:
+        print("Stopped contributing")
